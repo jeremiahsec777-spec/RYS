@@ -17,14 +17,10 @@ interface AppState {
   categories: string[];
   geminiApiKey: string;
   whisperModel: string;
-  autoCategorize: boolean;
   addNote: (note: Note) => void;
-  deleteNote: (id: string) => void;
-  updateNoteText: (id: string, newText: string) => void;
   addCategory: (category: string) => void;
   setGeminiApiKey: (key: string) => void;
   setWhisperModel: (model: string) => void;
-  setAutoCategorize: (value: boolean) => void;
   importNotes: (importedNotes: Note[]) => void;
 }
 
@@ -35,13 +31,8 @@ export const useStore = create<AppState>()(
       categories: ['General', 'Work', 'Ideas', 'Todos'],
       geminiApiKey: '',
       whisperModel: 'none', // tiny, base, small, medium, etc.
-      autoCategorize: false,
 
       addNote: (note) => set((state) => ({ notes: [...state.notes, note] })),
-      deleteNote: (id) => set((state) => ({ notes: state.notes.filter(n => n.id !== id) })),
-      updateNoteText: (id, newText) => set((state) => ({
-        notes: state.notes.map(n => n.id === id ? { ...n, text: newText } : n)
-      })),
       addCategory: (category) => set((state) => {
           if (!state.categories.includes(category)) {
               return { categories: [...state.categories, category] };
@@ -50,7 +41,6 @@ export const useStore = create<AppState>()(
       }),
       setGeminiApiKey: (key) => set({ geminiApiKey: key }),
       setWhisperModel: (model) => set({ whisperModel: model }),
-      setAutoCategorize: (value) => set({ autoCategorize: value }),
       importNotes: (importedNotes) => set((state) => {
           // simple merge, avoid duplicates
           const existingIds = new Set(state.notes.map(n => n.id));

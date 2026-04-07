@@ -1,22 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { useStore } from '../store/useStore';
 import { GlassContainer } from '../components/GlassContainer';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 
 export default function CategoriesScreen() {
   const { categories, notes } = useStore();
+  const navigation = useNavigation<any>();
 
   const renderCategory = ({ item }: { item: string }) => {
     const categoryNotes = notes.filter((n) => n.category === item);
 
     return (
-      <View style={styles.categoryWrapper}>
+      <TouchableOpacity
+        style={styles.categoryWrapper}
+        onPress={() => navigation.navigate('Notes', { category: item })}
+      >
         <GlassContainer style={styles.categoryCard} intensity={60}>
           <Text style={styles.categoryTitle}>{item}</Text>
           <Text style={styles.categoryCount}>{categoryNotes.length} notes</Text>
         </GlassContainer>
-      </View>
+      </TouchableOpacity>
     );
   };
 

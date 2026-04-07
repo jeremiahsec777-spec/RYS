@@ -37,7 +37,7 @@ export default function MapScreen() {
         style={styles.map}
         initialRegion={initialRegion}
         showsUserLocation
-        mapType="none" // To use only UrlTile
+        mapType="none" // OpenStreetMap tiles only
       >
         <UrlTile
           urlTemplate="https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -51,7 +51,7 @@ export default function MapScreen() {
                 key={note.id}
                 coordinate={{ latitude: note.latitude, longitude: note.longitude }}
               >
-                <GlassContainer style={styles.markerContainer}>
+                <GlassContainer style={styles.markerContainer} intensity={70}>
                   <Text style={styles.markerText} numberOfLines={1}>
                     {note.text}
                   </Text>
@@ -69,19 +69,24 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111',
+    backgroundColor: '#000',
   },
   map: {
     width: '100%',
     height: '100%',
   },
   markerContainer: {
-    padding: 5,
-    maxWidth: 100,
-    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    maxWidth: 120,
+    borderRadius: 20, // bubble-like markers
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   markerText: {
     color: '#fff',
-    fontSize: 10,
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });

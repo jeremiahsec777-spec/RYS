@@ -1,15 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useStore } from '../store/useStore';
 import { GlassContainer } from '../components/GlassContainer';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { File, Paths } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/build/legacy/FileSystem';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
+
+const WHISPER_MODELS: Record<string, string> = {
+  tiny: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin',
+  base: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin',
+  small: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin',
+  medium: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin',
+};
 
 export default function SettingsScreen() {
   const { geminiApiKey, setGeminiApiKey, whisperModel, setWhisperModel, notes, importNotes } = useStore();
   const [apiKeyInput, setApiKeyInput] = useState(geminiApiKey);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   const saveApiKey = () => {
     setGeminiApiKey(apiKeyInput);
@@ -19,9 +27,9 @@ export default function SettingsScreen() {
   const handleExport = async () => {
     try {
       const data = JSON.stringify(notes);
-      const file = new File(Paths.document, 'notes_export.json');
-      file.write(data);
-      await Sharing.shareAsync(file.uri);
+      const fileUri = (FileSystem.documentDirectory || "") + 'notes_export.json';
+      await FileSystem.writeAsStringAsync(fileUri, data, { encoding: 'utf8' });
+      await Sharing.shareAsync(fileUri);
     } catch (error) {
       Alert.alert('Export Failed', String(error));
     }
@@ -32,8 +40,7 @@ export default function SettingsScreen() {
       const result = await DocumentPicker.getDocumentAsync({ type: 'application/json' });
       if (result.canceled) return;
       const fileUri = result.assets[0].uri;
-      const file = new File(fileUri);
-      const data = await file.text();
+      const data = await FileSystem.readAsStringAsync(fileUri, { encoding: 'utf8' });
 
       const parsedNotes = JSON.parse(data);
       if (Array.isArray(parsedNotes)) {
@@ -47,22 +54,37 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleDownloadModel = (model: string) => {
-    setWhisperModel(model);
-    Alert.alert('Model Downloaded', `${model} model is now selected.`);
+  const handleDownloadModel = async (model: string) => {
+    setDownloading(model);
+    try {
+      const url = WHISPER_MODELS[model];
+      const destUri = (FileSystem.documentDirectory || "") + `ggml-${model}.bin`;
+      const downloadRes = await FileSystem.downloadAsync(url, destUri);
+
+      if (downloadRes.status === 200) {
+        setWhisperModel(model);
+        Alert.alert('Success', `${model} model downloaded successfully for offline transcription.`);
+      } else {
+        throw new Error("Bad status: " + downloadRes.status);
+      }
+    } catch (error) {
+      Alert.alert('Download Failed', String(error));
+    } finally {
+      setDownloading(null);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.title}>Settings</Text>
 
-        <GlassContainer style={styles.section}>
+        <GlassContainer style={styles.section} intensity={60}>
           <Text style={styles.sectionTitle}>Gemini API Key (Optional)</Text>
           <TextInput
             style={styles.input}
             placeholder="Enter API Key"
-            placeholderTextColor="#888"
+            placeholderTextColor="#8E8E93"
             value={apiKeyInput}
             onChangeText={setApiKeyInput}
             secureTextEntry
@@ -72,19 +94,28 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </GlassContainer>
 
-        <GlassContainer style={styles.section}>
+        <GlassContainer style={styles.section} intensity={60}>
           <Text style={styles.sectionTitle}>Whisper Models (Offline)</Text>
           <Text style={styles.currentModel}>Current: {whisperModel}</Text>
           <View style={styles.row}>
             {['tiny', 'base', 'small', 'medium'].map(model => (
-              <TouchableOpacity key={model} style={styles.modelButton} onPress={() => handleDownloadModel(model)}>
-                <Text style={styles.buttonText}>{model}</Text>
+              <TouchableOpacity
+                key={model}
+                style={[styles.modelButton, downloading === model && { opacity: 0.5 }]}
+                onPress={() => handleDownloadModel(model)}
+                disabled={downloading !== null}
+              >
+                {downloading === model ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.buttonText}>{model}</Text>
+                )}
               </TouchableOpacity>
             ))}
           </View>
         </GlassContainer>
 
-        <GlassContainer style={styles.section}>
+        <GlassContainer style={styles.section} intensity={60}>
           <Text style={styles.sectionTitle}>Data Management</Text>
           <View style={styles.row}>
             <TouchableOpacity style={[styles.button, styles.flexButton]} onPress={handleExport}>
@@ -104,17 +135,23 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111',
+    backgroundColor: '#000', // deep black background to make glass pop
+  },
+  scrollContent: {
+    paddingBottom: 100, // accommodate transparent tab bar
   },
   title: {
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: 'bold',
     color: '#fff',
-    margin: 20,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
+    letterSpacing: 0.5,
   },
   section: {
-    margin: 15,
-    padding: 20,
+    marginHorizontal: 16,
+    marginVertical: 10,
   },
   sectionTitle: {
     color: '#fff',
@@ -123,21 +160,27 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
     color: '#fff',
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 14,
     marginBottom: 15,
+    fontSize: 16,
   },
   button: {
-    backgroundColor: '#0A84FF',
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 16,
+    borderRadius: 14,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   buttonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '600',
+    fontSize: 16,
   },
   row: {
     flexDirection: 'row',
@@ -145,16 +188,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   modelButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 12,
+    borderRadius: 12,
     marginBottom: 10,
     width: '48%',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   currentModel: {
-    color: '#aaa',
+    color: '#8E8E93',
     marginBottom: 15,
+    fontSize: 14,
   },
   flexButton: {
     flex: 1,

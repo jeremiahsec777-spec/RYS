@@ -12,7 +12,7 @@ export default function CategoriesScreen() {
 
     return (
       <View style={styles.categoryWrapper}>
-        <GlassContainer style={styles.categoryCard}>
+        <GlassContainer style={styles.categoryCard} intensity={60}>
           <Text style={styles.categoryTitle}>{item}</Text>
           <Text style={styles.categoryCount}>{categoryNotes.length} notes</Text>
         </GlassContainer>
@@ -21,48 +21,56 @@ export default function CategoriesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Categories</Text>
-      <FlatList
-        data={categories}
-        keyExtractor={(item) => item}
-        renderItem={renderCategory}
-        contentContainerStyle={styles.list}
-      />
-    </SafeAreaView>
+    <View style={styles.container}>
+      <SafeAreaView style={{flex: 1}}>
+        <Text style={styles.title}>Categories</Text>
+        <FlatList
+          data={categories}
+          keyExtractor={(item) => item}
+          renderItem={renderCategory}
+          contentContainerStyle={styles.list}
+        />
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#111',
+    backgroundColor: '#000',
   },
   title: {
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: 'bold',
     color: '#fff',
-    margin: 20,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
+    letterSpacing: 0.5,
   },
   list: {
-    padding: 10,
+    padding: 16,
+    paddingBottom: 100, // Tab bar padding
   },
   categoryWrapper: {
-    marginBottom: 15,
+    marginBottom: 16,
   },
   categoryCard: {
-    padding: 20,
+    padding: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderRadius: 24, // Matches the new smoother glass shape
   },
   categoryTitle: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
   categoryCount: {
-    color: '#aaa',
-    fontSize: 14,
+    color: '#8E8E93',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

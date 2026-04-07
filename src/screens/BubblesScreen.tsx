@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, ActivityIndicator } from 'react-native';
 import { Audio } from 'expo-av';
 import * as Location from 'expo-location';
-import * as FileSystem from 'expo-file-system/build/legacy/FileSystem';
+import * as FileSystem from 'expo-file-system';
 import { useStore, Note } from '../store/useStore';
 import { GlassContainer } from '../components/GlassContainer';
 import { SafeAreaView } from 'react-native-safe-area-context';

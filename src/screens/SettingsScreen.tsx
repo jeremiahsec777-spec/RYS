@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Switch } from 'react-native';
 import { useStore } from '../store/useStore';
 import { GlassContainer } from '../components/GlassContainer';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as FileSystem from 'expo-file-system/build/legacy/FileSystem';
+import { Paths } from "expo-file-system";
+import * as FileSystem from "expo-file-system/build/legacy/FileSystem";
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 
@@ -15,7 +16,7 @@ const WHISPER_MODELS: Record<string, string> = {
 };
 
 export default function SettingsScreen() {
-  const { geminiApiKey, setGeminiApiKey, whisperModel, setWhisperModel, notes, importNotes } = useStore();
+  const { geminiApiKey, setGeminiApiKey, whisperModel, setWhisperModel, notes, importNotes, autoCategorize, setAutoCategorize } = useStore();
   const [apiKeyInput, setApiKeyInput] = useState(geminiApiKey);
   const [downloading, setDownloading] = useState<string | null>(null);
 
@@ -27,7 +28,7 @@ export default function SettingsScreen() {
   const handleExport = async () => {
     try {
       const data = JSON.stringify(notes);
-      const fileUri = (FileSystem.documentDirectory || "") + 'notes_export.json';
+      const fileUri = (Paths.document.uri || "" || "") + 'notes_export.json';
       await FileSystem.writeAsStringAsync(fileUri, data, { encoding: 'utf8' });
       await Sharing.shareAsync(fileUri);
     } catch (error) {
@@ -58,7 +59,7 @@ export default function SettingsScreen() {
     setDownloading(model);
     try {
       const url = WHISPER_MODELS[model];
-      const destUri = (FileSystem.documentDirectory || "") + `ggml-${model}.bin`;
+      const destUri = (Paths.document.uri || "" || "") + `ggml-${model}.bin`;
       const downloadRes = await FileSystem.downloadAsync(url, destUri);
 
       if (downloadRes.status === 200) {
@@ -92,6 +93,18 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.button} onPress={saveApiKey}>
             <Text style={styles.buttonText}>Save Key</Text>
           </TouchableOpacity>
+        </GlassContainer>
+
+        <GlassContainer style={styles.section} intensity={60}>
+          <Text style={styles.sectionTitle}>Smart Features</Text>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Auto-Categorize with Voice/AI</Text>
+            <Switch
+              value={autoCategorize}
+              onValueChange={setAutoCategorize}
+              trackColor={{ false: '#767577', true: '#34C759' }}
+            />
+          </View>
         </GlassContainer>
 
         <GlassContainer style={styles.section} intensity={60}>
@@ -201,6 +214,16 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     marginBottom: 15,
     fontSize: 14,
+  },
+  switchRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  switchLabel: {
+    color: "#fff",
+    fontSize: 16,
   },
   flexButton: {
     flex: 1,

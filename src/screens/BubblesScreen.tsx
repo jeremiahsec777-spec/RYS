@@ -83,7 +83,7 @@ export default function BubblesScreen() {
       }
     } catch (error) {
       console.error(error);
-      text = "Transcription failed: " + String(error);
+      text = "Transcription failed. Please try again or check your settings.";
     }
 
     let latitude = undefined;

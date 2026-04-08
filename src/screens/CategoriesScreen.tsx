@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { useStore } from '../store/useStore';
 import { GlassContainer } from '../components/GlassContainer';
@@ -7,14 +7,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CategoriesScreen() {
   const { categories, notes } = useStore();
 
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const note of notes) {
+      counts.set(note.category, (counts.get(note.category) || 0) + 1);
+    }
+    return counts;
+  }, [notes]);
+
   const renderCategory = ({ item }: { item: string }) => {
-    const categoryNotes = notes.filter((n) => n.category === item);
+    const count = categoryCounts.get(item) || 0;
 
     return (
       <View style={styles.categoryWrapper}>
         <GlassContainer style={styles.categoryCard} intensity={60}>
           <Text style={styles.categoryTitle}>{item}</Text>
-          <Text style={styles.categoryCount}>{categoryNotes.length} notes</Text>
+          <Text style={styles.categoryCount}>{count} notes</Text>
         </GlassContainer>
       </View>
     );

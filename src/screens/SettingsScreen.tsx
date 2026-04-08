@@ -32,9 +32,6 @@ export default function SettingsScreen() {
     try {
       const data = JSON.stringify(notes);
 
-      const documentDirectory = (FileSystem as any).documentDirectory as string | null;
-      if (!documentDirectory) {
-        throw new Error('Document directory is not available');
       const documentDirectory = (FileSystem as unknown as LegacyFileSystem).documentDirectory;
       if (!documentDirectory) {
         Alert.alert('Export Failed', 'Document directory is not available.');
@@ -70,16 +67,12 @@ export default function SettingsScreen() {
   const handleDownloadModel = async (model: string) => {
     setDownloading(model);
     try {
+      const url = WHISPER_MODELS[model];
+
       const documentDirectory = (FileSystem as unknown as LegacyFileSystem).documentDirectory;
       if (!documentDirectory) {
         Alert.alert('Download Failed', 'Document directory is not available.');
         return;
-      }
-      const url = WHISPER_MODELS[model];
-
-      const documentDirectory = (FileSystem as any).documentDirectory as string | null;
-      if (!documentDirectory) {
-        throw new Error('Document directory is not available');
       }
       const destUri = documentDirectory + `ggml-${model}.bin`;
       const downloadRes = await FileSystem.downloadAsync(url, destUri);

@@ -6,9 +6,9 @@ import * as FileSystem from 'expo-file-system';
 import { useStore, Note } from '../store/useStore';
 import { GlassContainer } from '../components/GlassContainer';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { initWhisper } from 'whisper.rn';
 import { BlurView } from 'expo-blur';
+import { processAudioWithGemini } from '../utils/audioProcessor';
 
 export default function BubblesScreen() {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
@@ -39,20 +39,12 @@ export default function BubblesScreen() {
     }
   };
 
-  const processAudioWithGemini = async (uri: string): Promise<string> => {
-    if (!geminiApiKey) throw new Error("Gemini API key is not set");
-    const base64Audio = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
-    const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const prompt = "Please transcribe this audio accurately.";
-    const audioPart = { inlineData: { data: base64Audio, mimeType: "audio/m4a" } };
-    const result = await model.generateContent([prompt, audioPart]);
-    return result.response.text();
-  };
-
   const processAudioWithWhisper = async (uri: string): Promise<string> => {
-    // @ts-ignore
-    const modelPath = (FileSystem.documentDirectory || "") + `ggml-${whisperModel}.bin`;
+    const documentDirectory = (FileSystem as unknown as { documentDirectory: string | null }).documentDirectory;
+    if (!documentDirectory) {
+      throw new Error("Document directory is not available");
+    }
+    const modelPath = documentDirectory + `ggml-${whisperModel}.bin`;
     const fileInfo = await FileSystem.getInfoAsync(modelPath);
     if (!fileInfo.exists) {
       throw new Error(`Whisper model ${whisperModel} not found. Please download it in settings.`);
@@ -72,18 +64,26 @@ export default function BubblesScreen() {
     const uri = recording.getURI();
     setRecording(null);
 
+    if (!uri) {
+      setIsProcessing(false);
+      Alert.alert('Recording Failed', 'Could not get audio URI.');
+      return;
+    }
+
     let text = "Transcription unavailable";
     try {
       if (whisperModel !== 'none') {
          text = await processAudioWithWhisper(uri!);
       } else if (geminiApiKey) {
-         text = await processAudioWithGemini(uri!);
+         text = await processAudioWithGemini(uri!, geminiApiKey);
       } else {
          text = "Please set a Gemini API Key or download an offline model in Settings to enable transcription.";
       }
     } catch (error) {
       console.error(error);
-      text = "Transcription failed: " + String(error);
+      text = "Transcription failed. Please try again or check your settings.";
+      console.error('Transcription error', error);
+      text = "Transcription failed. Please try again.";
     }
 
     let latitude = undefined;

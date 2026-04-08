@@ -30,6 +30,7 @@ export default function MapScreen() {
           longitudeDelta: 0.0421,
         });
       } catch (error) {
+        console.log('Error fetching location in MapScreen:', error);
         console.log('Error getting location: ', error);
       }
     })();

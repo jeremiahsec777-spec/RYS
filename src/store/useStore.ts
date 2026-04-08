@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface Note {
@@ -24,6 +24,13 @@ interface AppState {
   importNotes: (importedNotes: Note[]) => void;
 }
 
+
+const secureStorage = {
+  getItem: (name: string) => SecureStore.getItemAsync(name),
+  setItem: (name: string, value: string) => SecureStore.setItemAsync(name, value),
+  removeItem: (name: string) => SecureStore.deleteItemAsync(name),
+};
+
 export const useStore = create<AppState>()(
   persist(
     (set) => ({
@@ -43,14 +50,17 @@ export const useStore = create<AppState>()(
       setWhisperModel: (model) => set({ whisperModel: model }),
       importNotes: (importedNotes) => set((state) => {
           // simple merge, avoid duplicates
-          const existingIds = new Set(state.notes.map(n => n.id));
+          const existingIds = new Set<string>();
+          for (const note of state.notes) {
+              existingIds.add(note.id);
+          }
           const newNotes = importedNotes.filter(n => !existingIds.has(n.id));
           return { notes: [...state.notes, ...newNotes] };
       }),
     }),
     {
       name: 'notes-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => secureStorage),
     }
   )
 );

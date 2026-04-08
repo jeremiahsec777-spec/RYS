@@ -45,8 +45,6 @@ export default function BubblesScreen() {
       throw new Error("Document directory is not available");
     }
     const modelPath = documentDirectory + `ggml-${whisperModel}.bin`;
-    // @ts-ignore
-    const modelPath = (FileSystem.documentDirectory || "") + `ggml-${whisperModel}.bin`;
     const fileInfo = await FileSystem.getInfoAsync(modelPath);
     if (!fileInfo.exists) {
       throw new Error(`Whisper model ${whisperModel} not found. Please download it in settings.`);

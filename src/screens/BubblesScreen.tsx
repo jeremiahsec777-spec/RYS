@@ -68,6 +68,12 @@ export default function BubblesScreen() {
     const uri = recording.getURI();
     setRecording(null);
 
+    if (!uri) {
+      setIsProcessing(false);
+      Alert.alert('Recording Failed', 'Could not get audio URI.');
+      return;
+    }
+
     let text = "Transcription unavailable";
     try {
       if (whisperModel !== 'none') {

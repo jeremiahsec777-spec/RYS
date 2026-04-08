@@ -15,7 +15,11 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["audio", "location", "fetch"]
+        "UIBackgroundModes": [
+          "audio",
+          "location",
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -53,7 +57,8 @@
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone."
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

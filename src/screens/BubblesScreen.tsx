@@ -80,6 +80,8 @@ export default function BubblesScreen() {
          text = "Please set a Gemini API Key or download an offline model in Settings to enable transcription.";
       }
     } catch (error) {
+      console.error(error);
+      text = "Transcription failed. Please try again or check your settings.";
       console.error('Transcription error', error);
       text = "Transcription failed. Please try again.";
     }

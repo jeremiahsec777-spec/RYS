@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface Note {
@@ -23,6 +23,13 @@ interface AppState {
   setWhisperModel: (model: string) => void;
   importNotes: (importedNotes: Note[]) => void;
 }
+
+
+const secureStorage = {
+  getItem: (name: string) => SecureStore.getItemAsync(name),
+  setItem: (name: string, value: string) => SecureStore.setItemAsync(name, value),
+  removeItem: (name: string) => SecureStore.deleteItemAsync(name),
+};
 
 export const useStore = create<AppState>()(
   persist(
@@ -50,7 +57,7 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'notes-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => secureStorage),
     }
   )
 );

@@ -1,42 +1,73 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList } from 'react-native';
-import { useStore } from '../store/useStore';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { Audio } from 'expo-av';
+import { useStore, Note } from '../store/useStore';
 import { GlassContainer } from '../components/GlassContainer';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function CategoriesScreen() {
-  const { categories, notes } = useStore();
+export default function HistoryScreen() {
+  const { notes } = useStore();
 
-  const categoryCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const note of notes) {
-      counts.set(note.category, (counts.get(note.category) || 0) + 1);
+  const playSound = async (uri: string | undefined) => {
+    if (!uri) return;
+
+    if (!uri.startsWith('file://')) {
+      Alert.alert('Playback Failed', 'Invalid audio source.');
+      return;
     }
-    return counts;
-  }, [notes]);
 
-  const renderCategory = ({ item }: { item: string }) => {
-    const count = categoryCounts.get(item) || 0;
+    try {
+      const { sound } = await Audio.Sound.createAsync({ uri });
+      await sound.playAsync();
 
-    return (
-      <View style={styles.categoryWrapper}>
-        <GlassContainer style={styles.categoryCard} intensity={60}>
-          <Text style={styles.categoryTitle}>{item}</Text>
-          <Text style={styles.categoryCount}>{count} notes</Text>
-        </GlassContainer>
-      </View>
-    );
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
+      });
+    } catch (error) {
+      console.error('Failed to play sound', error);
+      Alert.alert('Playback Failed', 'Could not play the recorded audio.');
+    }
   };
+
+  const renderNote = ({ item }: { item: Note }) => (
+    <View style={styles.noteWrapper}>
+      <GlassContainer style={styles.noteCard} intensity={60}>
+        <View style={styles.noteHeader}>
+          <Text style={styles.noteCategory}>{item.category}</Text>
+          <Text style={styles.noteDate}>{new Date(item.timestamp).toLocaleDateString()}</Text>
+        </View>
+        <Text style={styles.noteText}>{item.text}</Text>
+
+        {item.audioUri && (
+          <TouchableOpacity
+            style={styles.playButton}
+            onPress={() => playSound(item.audioUri)}
+          >
+            <Text style={styles.playButtonText}>▶ Play Audio</Text>
+          </TouchableOpacity>
+        )}
+      </GlassContainer>
+    </View>
+  );
+
+  const sortedNotes = useMemo(() => {
+    return [...notes].sort((a, b) => b.timestamp - a.timestamp);
+  }, [notes]);
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={{flex: 1}}>
-        <Text style={styles.title}>Categories</Text>
+        <Text style={styles.title}>History</Text>
         <FlatList
-          data={categories}
-          keyExtractor={(item) => item}
-          renderItem={renderCategory}
+          data={sortedNotes}
+          keyExtractor={(item) => item.id}
+          renderItem={renderNote}
           contentContainerStyle={styles.list}
+          ListEmptyComponent={
+             <Text style={styles.emptyText}>No notes yet. Tap Cocoon to record one.</Text>
+          }
         />
       </SafeAreaView>
     </View>
@@ -46,12 +77,12 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#FAF9F6', // Off-white to match
   },
   title: {
     fontSize: 34,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#333',
     marginHorizontal: 20,
     marginTop: 20,
     marginBottom: 10,
@@ -61,24 +92,52 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 100, // Tab bar padding
   },
-  categoryWrapper: {
+  noteWrapper: {
     marginBottom: 16,
   },
-  categoryCard: {
-    padding: 24,
+  noteCard: {
+    padding: 20,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  noteHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderRadius: 24, // Matches the new smoother glass shape
+    marginBottom: 10,
   },
-  categoryTitle: {
-    color: '#fff',
-    fontSize: 20,
+  noteCategory: {
+    color: '#007AFF', // Theme blue
+    fontSize: 14,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  noteDate: {
+    color: '#8E8E93',
+    fontSize: 12,
+  },
+  noteText: {
+    color: '#333',
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  playButton: {
+    marginTop: 15,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  playButtonText: {
+    color: '#007AFF',
+    fontSize: 14,
     fontWeight: '600',
   },
-  categoryCount: {
+  emptyText: {
     color: '#8E8E93',
     fontSize: 16,
-    fontWeight: '500',
-  },
+    textAlign: 'center',
+    marginTop: 50,
+  }
 });

@@ -45,7 +45,7 @@ export const AppNavigator = () => {
       }}
     >
       <Tab.Screen name="Bubbles" component={BubblesScreen} />
-      <Tab.Screen name="Categories" component={CategoriesScreen} />
+      <Tab.Screen name="History" component={CategoriesScreen} />
       <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>

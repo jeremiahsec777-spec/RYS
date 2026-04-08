@@ -1,61 +1,72 @@
+import { renderHook, act } from '@testing-library/react-native';
 import { useStore } from './useStore';
-
-// Mock AsyncStorage to avoid "window is not defined" errors during tests in Node environment
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  setItem: jest.fn(),
-  getItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
-  getAllKeys: jest.fn(),
-  multiGet: jest.fn(),
-  multiSet: jest.fn(),
-  multiRemove: jest.fn(),
-}));
 
 describe('useStore', () => {
   beforeEach(() => {
-    // Reset the store's categories to a known state before each test
-    useStore.setState({ categories: ['General', 'Work', 'Ideas', 'Todos'] });
+    // Reset store before each test
+    const { result } = renderHook(() => useStore());
+    act(() => {
+      useStore.setState({ notes: [], categories: [{ name: 'General', x: 0, y: 0, color: '#000' }] });
+    });
   });
 
-  describe('addCategory', () => {
-    it('should add a new category when it does not exist', () => {
-      const initialState = useStore.getState();
-      const initialCount = initialState.categories.length;
+  it('adds a note successfully', () => {
+    const { result } = renderHook(() => useStore());
 
-      useStore.getState().addCategory('NewCategory');
+    const testNote = {
+      id: '1',
+      text: 'Test note',
+      category: 'General',
+      timestamp: 1234567890,
+    };
 
-      const state = useStore.getState();
-      expect(state.categories.length).toBe(initialCount + 1);
-      expect(state.categories).toContain('NewCategory');
+    act(() => {
+      result.current.addNote(testNote);
     });
 
-    it('should not add a duplicate category', () => {
-      const initialState = useStore.getState();
-      const initialCount = initialState.categories.length;
+    expect(result.current.notes).toContainEqual(testNote);
+    expect(result.current.notes.length).toBe(1);
+  });
 
-      // Attempt to add 'Work' which already exists in the initial state
-      useStore.getState().addCategory('Work');
+  it('adds a category successfully', () => {
+    const { result } = renderHook(() => useStore());
 
-      const state = useStore.getState();
-      expect(state.categories.length).toBe(initialCount);
-
-      // Ensure 'Work' is still only present once
-      const workCount = state.categories.filter(c => c === 'Work').length;
-      expect(workCount).toBe(1);
+    act(() => {
+      result.current.addCategory('Test Category', 10, 20);
     });
 
-    it('should correctly handle case sensitivity (i.e. allows different casing)', () => {
-        const initialState = useStore.getState();
-        const initialCount = initialState.categories.length;
+    expect(result.current.categories.find(c => c.name === 'Test Category')).toBeDefined();
+    expect(result.current.categories.find(c => c.name === 'Test Category')?.x).toBe(10);
+  });
 
-        // Attempt to add 'work' (lowercase) when 'Work' exists
-        useStore.getState().addCategory('work');
+  it('updates a category position', () => {
+    const { result } = renderHook(() => useStore());
 
-        const state = useStore.getState();
-        expect(state.categories.length).toBe(initialCount + 1);
-        expect(state.categories).toContain('work');
-        expect(state.categories).toContain('Work');
+    act(() => {
+      result.current.addCategory('Move Me', 10, 10);
     });
+
+    act(() => {
+      result.current.updateCategoryPosition('Move Me', 50, 60);
+    });
+
+    expect(result.current.categories.find(c => c.name === 'Move Me')?.x).toBe(50);
+    expect(result.current.categories.find(c => c.name === 'Move Me')?.y).toBe(60);
+  });
+
+  it('does not add duplicate categories', () => {
+    const { result } = renderHook(() => useStore());
+
+    act(() => {
+      result.current.addCategory('Duplicate');
+    });
+
+    const initialLength = result.current.categories.length;
+
+    act(() => {
+      result.current.addCategory('Duplicate');
+    });
+
+    expect(result.current.categories.length).toBe(initialLength);
   });
 });

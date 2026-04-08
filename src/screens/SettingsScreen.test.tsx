@@ -5,10 +5,20 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import SettingsScreen from './SettingsScreen';
+
+jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({children}: any) => <>{children}</> }));
+jest.mock('../components/GlassContainer', () => ({ GlassContainer: ({children}: any) => <>{children}</> }));
 import { useStore } from '../store/useStore';
 
 // Mock dependencies
-jest.mock('expo-file-system');
+jest.mock('expo-file-system', () => ({
+  get documentDirectory() { return (global as any).__mockDocumentDirectory; },
+  writeAsStringAsync: jest.fn(),
+  readAsStringAsync: jest.fn(),
+  downloadAsync: jest.fn(),
+  getInfoAsync: jest.fn().mockResolvedValue({exists: true}),
+  deleteAsync: jest.fn()
+}));
 jest.mock('expo-sharing');
 jest.mock('expo-document-picker');
 jest.mock('../store/useStore');
@@ -34,7 +44,7 @@ describe('SettingsScreen', () => {
   describe('handleExport', () => {
     it('successfully exports notes', async () => {
       // Mock FileSystem.documentDirectory
-      (FileSystem as any).documentDirectory = 'file://mock/directory/';
+      (global as any).__mockDocumentDirectory = 'file://mock/document/dir/';
       (FileSystem.writeAsStringAsync as jest.Mock).mockResolvedValueOnce(undefined);
       (Sharing.shareAsync as jest.Mock).mockResolvedValueOnce(undefined);
 
@@ -45,17 +55,17 @@ describe('SettingsScreen', () => {
 
       await waitFor(() => {
         expect(FileSystem.writeAsStringAsync).toHaveBeenCalledWith(
-          'file://mock/directory/notes_export.json',
+          'file://mock/document/dir/notes_export.json',
           JSON.stringify(mockNotes),
           { encoding: 'utf8' }
         );
-        expect(Sharing.shareAsync).toHaveBeenCalledWith('file://mock/directory/notes_export.json');
+        expect(Sharing.shareAsync).toHaveBeenCalledWith('file://mock/document/dir/notes_export.json');
         expect(Alert.alert).not.toHaveBeenCalled();
       });
     });
 
     it('shows error alert when documentDirectory is missing', async () => {
-      (FileSystem as any).documentDirectory = null;
+      (global as any).__mockDocumentDirectory = null;
 
       const { getByText } = render(<SettingsScreen />);
 
@@ -73,6 +83,8 @@ describe('SettingsScreen', () => {
     });
 
     it('shows error alert when file writing fails', async () => {
+      (global as any).__mockDocumentDirectory = 'file://mock/document/dir/';
+      (global as any).__mockDocumentDirectory = 'file://mock/document/dir/';
       (FileSystem as any).documentDirectory = 'file://mock/directory/';
       const errorMessage = 'Write error';
       (FileSystem.writeAsStringAsync as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));

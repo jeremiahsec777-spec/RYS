@@ -89,11 +89,16 @@ export default function BubblesScreen() {
     let latitude = undefined;
     let longitude = undefined;
     try {
-      let location = await Location.getCurrentPositionAsync({});
-      latitude = location.coords.latitude;
-      longitude = location.coords.longitude;
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        let location = await Location.getCurrentPositionAsync({});
+        latitude = location.coords.latitude;
+        longitude = location.coords.longitude;
+      } else {
+        console.warn('Location permission not granted');
+      }
     } catch (e) {
-      console.log('Could not fetch location');
+      console.error('Could not fetch location', e);
     }
 
     const newNote: Note = {

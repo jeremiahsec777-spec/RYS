@@ -51,6 +51,7 @@ export default function BubblesScreen() {
   };
 
   const processAudioWithWhisper = async (uri: string): Promise<string> => {
+    // @ts-ignore
     const modelPath = (FileSystem.documentDirectory || "") + `ggml-${whisperModel}.bin`;
     const whisperContext = await initWhisper({ filePath: modelPath });
     const { promise } = whisperContext.transcribe(uri, { language: 'en', maxLen: 1, tokenTimestamps: true });

@@ -7,6 +7,10 @@ import * as FileSystem from 'expo-file-system';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 
+interface LegacyFileSystem {
+  documentDirectory: string | null;
+}
+
 const WHISPER_MODELS: Record<string, string> = {
   tiny: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin',
   base: 'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin',
@@ -27,8 +31,16 @@ export default function SettingsScreen() {
   const handleExport = async () => {
     try {
       const data = JSON.stringify(notes);
-      // @ts-ignore
-      const fileUri = (FileSystem.documentDirectory || "") + 'notes_export.json';
+
+      const documentDirectory = (FileSystem as any).documentDirectory as string | null;
+      if (!documentDirectory) {
+        throw new Error('Document directory is not available');
+      const documentDirectory = (FileSystem as unknown as LegacyFileSystem).documentDirectory;
+      if (!documentDirectory) {
+        Alert.alert('Export Failed', 'Document directory is not available.');
+        return;
+      }
+      const fileUri = documentDirectory + 'notes_export.json';
       await FileSystem.writeAsStringAsync(fileUri, data, { encoding: 'utf8' });
       await Sharing.shareAsync(fileUri);
     } catch (error) {
@@ -58,9 +70,18 @@ export default function SettingsScreen() {
   const handleDownloadModel = async (model: string) => {
     setDownloading(model);
     try {
+      const documentDirectory = (FileSystem as unknown as LegacyFileSystem).documentDirectory;
+      if (!documentDirectory) {
+        Alert.alert('Download Failed', 'Document directory is not available.');
+        return;
+      }
       const url = WHISPER_MODELS[model];
-      // @ts-ignore
-      const destUri = (FileSystem.documentDirectory || "") + `ggml-${model}.bin`;
+
+      const documentDirectory = (FileSystem as any).documentDirectory as string | null;
+      if (!documentDirectory) {
+        throw new Error('Document directory is not available');
+      }
+      const destUri = documentDirectory + `ggml-${model}.bin`;
       const downloadRes = await FileSystem.downloadAsync(url, destUri);
 
       if (downloadRes.status === 200) {

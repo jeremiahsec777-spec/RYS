@@ -40,6 +40,11 @@ export default function BubblesScreen() {
   };
 
   const processAudioWithWhisper = async (uri: string): Promise<string> => {
+    const documentDirectory = (FileSystem as unknown as { documentDirectory: string | null }).documentDirectory;
+    if (!documentDirectory) {
+      throw new Error("Document directory is not available");
+    }
+    const modelPath = documentDirectory + `ggml-${whisperModel}.bin`;
     // @ts-ignore
     const modelPath = (FileSystem.documentDirectory || "") + `ggml-${whisperModel}.bin`;
     const fileInfo = await FileSystem.getInfoAsync(modelPath);

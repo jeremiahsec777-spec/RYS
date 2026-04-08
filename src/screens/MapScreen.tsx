@@ -21,13 +21,18 @@ export default function MapScreen() {
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
-      setInitialRegion({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      });
+      try {
+        let location = await Location.getCurrentPositionAsync({});
+        setInitialRegion({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        });
+      } catch (error) {
+        console.log('Error fetching location in MapScreen:', error);
+        console.log('Error getting location: ', error);
+      }
     })();
   }, []);
 

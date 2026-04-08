@@ -15,7 +15,11 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["audio", "location", "fetch"]
+        "UIBackgroundModes": [
+          "audio",
+          "location",
+          "fetch"
+        ]
       }
     },
     "android": {
@@ -34,6 +38,7 @@
         "android.permission.FOREGROUND_SERVICE_MICROPHONE",
         "android.permission.FOREGROUND_SERVICE_LOCATION",
         "android.permission.WAKE_LOCK",
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
       ],
       "package": "com.notesapp.app"
@@ -53,7 +58,8 @@
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone."
         }
-      ]
+      ],
+      "expo-secure-store"
     ]
   }
 }

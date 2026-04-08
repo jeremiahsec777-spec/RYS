@@ -50,7 +50,10 @@ export const useStore = create<AppState>()(
       setWhisperModel: (model) => set({ whisperModel: model }),
       importNotes: (importedNotes) => set((state) => {
           // simple merge, avoid duplicates
-          const existingIds = new Set(state.notes.map(n => n.id));
+          const existingIds = new Set<string>();
+          for (const note of state.notes) {
+              existingIds.add(note.id);
+          }
           const newNotes = importedNotes.filter(n => !existingIds.has(n.id));
           return { notes: [...state.notes, ...newNotes] };
       }),

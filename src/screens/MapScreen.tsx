@@ -31,6 +31,7 @@ export default function MapScreen() {
         });
       } catch (error) {
         console.log('Error fetching location in MapScreen:', error);
+        console.log('Error getting location: ', error);
       }
     })();
   }, []);

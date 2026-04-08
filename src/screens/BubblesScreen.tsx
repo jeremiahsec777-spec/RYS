@@ -53,6 +53,10 @@ export default function BubblesScreen() {
   const processAudioWithWhisper = async (uri: string): Promise<string> => {
     // @ts-ignore
     const modelPath = (FileSystem.documentDirectory || "") + `ggml-${whisperModel}.bin`;
+    const fileInfo = await FileSystem.getInfoAsync(modelPath);
+    if (!fileInfo.exists) {
+      throw new Error(`Whisper model ${whisperModel} not found. Please download it in settings.`);
+    }
     const whisperContext = await initWhisper({ filePath: modelPath });
     const { promise } = whisperContext.transcribe(uri, { language: 'en', maxLen: 1, tokenTimestamps: true });
     const result = await promise;
@@ -91,11 +95,16 @@ export default function BubblesScreen() {
     let latitude = undefined;
     let longitude = undefined;
     try {
-      let location = await Location.getCurrentPositionAsync({});
-      latitude = location.coords.latitude;
-      longitude = location.coords.longitude;
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        let location = await Location.getCurrentPositionAsync({});
+        latitude = location.coords.latitude;
+        longitude = location.coords.longitude;
+      } else {
+        console.warn('Location permission not granted');
+      }
     } catch (e) {
-      console.log('Could not fetch location');
+      console.error('Could not fetch location', e);
     }
 
     const newNote: Note = {
@@ -116,6 +125,14 @@ export default function BubblesScreen() {
 
   const playSound = async (uri: string | undefined) => {
     if (!uri) return;
+
+    // Security check: only allow local file playback
+    if (!uri.startsWith('file://')) {
+      console.error('Invalid audio URI: must be a local file path');
+      Alert.alert('Playback Failed', 'Invalid audio source.');
+      return;
+    }
+
     try {
       const { sound } = await Audio.Sound.createAsync({ uri });
       await sound.playAsync();

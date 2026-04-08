@@ -6,7 +6,7 @@ describe('useStore', () => {
     // Reset store before each test
     const { result } = renderHook(() => useStore());
     act(() => {
-      useStore.setState({ notes: [], categories: [{ name: 'General', x: 0, y: 0, color: '#000' }] });
+      useStore.setState({ notes: [], categories: [{ id: '1', name: 'General', x: 0, y: 0, color: '#000', noteCount: 0 }] });
     });
   });
 
@@ -16,7 +16,7 @@ describe('useStore', () => {
     const testNote = {
       id: '1',
       text: 'Test note',
-      category: 'General',
+      categoryId: '1', categoryName: 'General',
       timestamp: 1234567890,
     };
 
@@ -47,7 +47,8 @@ describe('useStore', () => {
     });
 
     act(() => {
-      result.current.updateCategoryPosition('Move Me', 50, 60);
+      const id = result.current.categories.find(c => c.name === 'Move Me')?.id || '0';
+      result.current.updateCategoryPosition(id, 50, 60);
     });
 
     expect(result.current.categories.find(c => c.name === 'Move Me')?.x).toBe(50);

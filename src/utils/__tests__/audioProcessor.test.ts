@@ -1,3 +1,4 @@
+jest.mock('whisper.rn', () => ({ initWhisper: jest.fn() }), { virtual: true });
 import * as FileSystem from 'expo-file-system';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { processAudioWithGemini } from '../audioProcessor';

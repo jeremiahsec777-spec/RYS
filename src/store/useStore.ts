@@ -4,19 +4,22 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface Note {
   id: string;
+  categoryId: string; // Updated from category: string to categoryId
+  categoryName: string; // Keeping name for backward compatibility during display/migrations easily
   text: string;
   audioUri?: string;
-  category: string;
   timestamp: number;
   latitude?: number;
   longitude?: number;
 }
 
 export interface CategoryData {
+  id: string;
   name: string;
   x: number;
   y: number;
   color: string;
+  noteCount: number; // Added to dynamically track size
 }
 
 interface AppState {
@@ -27,7 +30,7 @@ interface AppState {
   categorizationKeyword: string;
   addNote: (note: Note) => void;
   addCategory: (categoryName: string, x?: number, y?: number) => void;
-  updateCategoryPosition: (name: string, x: number, y: number) => void;
+  updateCategoryPosition: (id: string, x: number, y: number) => void;
   setGeminiApiKey: (key: string) => void;
   setWhisperModel: (model: string) => void;
   setCategorizationKeyword: (keyword: string) => void;
@@ -42,14 +45,7 @@ const secureStorage = {
 
 const getRandomColor = () => {
   const colors = [
-    '#FF3B30', // Red
-    '#FF9500', // Orange
-    '#FFCC00', // Yellow
-    '#4CD964', // Green
-    '#5AC8FA', // Light Blue
-    '#007AFF', // Blue
-    '#5856D6', // Purple
-    '#FF2D55', // Pink
+    '#FF3B30', '#FF9500', '#FFCC00', '#4CD964', '#5AC8FA', '#007AFF', '#5856D6', '#FF2D55',
   ];
   return colors[Math.floor(Math.random() * colors.length)];
 };
@@ -59,32 +55,44 @@ export const useStore = create<AppState>()(
     (set) => ({
       notes: [],
       categories: [
-        { name: 'General', x: 50, y: 100, color: '#FF3B30' },
-        { name: 'Work', x: 200, y: 150, color: '#007AFF' },
-        { name: 'Ideas', x: 80, y: 300, color: '#4CD964' },
-        { name: 'Todos', x: 250, y: 400, color: '#FF9500' }
+        { id: '1', name: 'General', x: 50, y: 100, color: '#FF3B30', noteCount: 0 },
+        { id: '2', name: 'Work', x: 200, y: 150, color: '#007AFF', noteCount: 0 },
+        { id: '3', name: 'Ideas', x: 80, y: 300, color: '#4CD964', noteCount: 0 },
+        { id: '4', name: 'Todos', x: 250, y: 400, color: '#FF9500', noteCount: 0 }
       ],
       geminiApiKey: '',
       whisperModel: 'none',
       categorizationKeyword: 'Cocoon',
 
-      addNote: (note) => set((state) => ({ notes: [...state.notes, note] })),
+      addNote: (note) => set((state) => {
+        // Increment note count for the category
+        const updatedCategories = state.categories.map(c =>
+          c.id === note.categoryId ? { ...c, noteCount: c.noteCount + 1 } : c
+        );
+        return { notes: [...state.notes, note], categories: updatedCategories };
+      }),
 
       addCategory: (categoryName, x = 100, y = 100) => set((state) => {
         if (!state.categories.find(c => c.name === categoryName)) {
           return {
             categories: [
               ...state.categories,
-              { name: categoryName, x, y, color: getRandomColor() }
+              {
+                id: Date.now().toString(),
+                name: categoryName,
+                x, y,
+                color: getRandomColor(),
+                noteCount: 0
+              }
             ]
           };
         }
         return state;
       }),
 
-      updateCategoryPosition: (name, x, y) => set((state) => ({
+      updateCategoryPosition: (id, x, y) => set((state) => ({
         categories: state.categories.map(c =>
-          c.name === name ? { ...c, x, y } : c
+          c.id === id ? { ...c, x, y } : c
         )
       })),
 
@@ -98,27 +106,69 @@ export const useStore = create<AppState>()(
           existingIds.add(note.id);
         }
         const newNotes = importedNotes.filter(n => !existingIds.has(n.id));
-        return { notes: [...state.notes, ...newNotes] };
+
+        // Recalculate noteCounts roughly
+        const updatedCategories = [...state.categories];
+        newNotes.forEach(note => {
+          const cat = updatedCategories.find(c => c.id === note.categoryId);
+          if (cat) cat.noteCount++;
+        });
+
+        return { notes: [...state.notes, ...newNotes], categories: updatedCategories };
       }),
     }),
     {
       name: 'notes-storage',
       storage: createJSONStorage(() => secureStorage),
-      // Only persist specific fields, or handle migration for old string[] categories
       migrate: (persistedState: any, version: number) => {
-        if (persistedState.categories && Array.isArray(persistedState.categories) && typeof persistedState.categories[0] === 'string') {
-          // migrate old string[] categories to CategoryData[]
-          persistedState.categories = persistedState.categories.map((c: string, index: number) => ({
-             name: c,
-             x: 50 + (index * 30),
-             y: 100 + (index * 50),
-             color: getRandomColor()
-          }));
+        // Simple migration for backward compatibility
+        let state = { ...persistedState };
+        if (state.categories && state.categories.length > 0) {
+          // If old category string array
+          if (typeof state.categories[0] === 'string') {
+             state.categories = state.categories.map((c: string, index: number) => ({
+               id: index.toString(),
+               name: c,
+               x: 50 + (index * 30),
+               y: 100 + (index * 50),
+               color: getRandomColor(),
+               noteCount: 0
+             }));
+          } else if (state.categories[0].id === undefined) {
+             // Migrate from CategoryData without id and noteCount
+             state.categories = state.categories.map((c: any, index: number) => ({
+               ...c,
+               id: Date.now().toString() + index,
+               noteCount: 0
+             }));
+          }
         }
-        if (!persistedState.categorizationKeyword) {
-          persistedState.categorizationKeyword = 'Cocoon';
+
+        if (state.notes) {
+          state.notes = state.notes.map((n: any) => {
+            if (n.category && !n.categoryId) {
+               // Find category ID based on name
+               const cat = state.categories.find((c: any) => c.name === n.category);
+               return {
+                 ...n,
+                 categoryId: cat ? cat.id : '1',
+                 categoryName: n.category,
+                 text: n.text || ''
+               };
+            }
+            return n;
+          });
+
+          // Fix note counts
+          state.categories.forEach((cat: any) => {
+            cat.noteCount = state.notes.filter((n: any) => n.categoryId === cat.id).length;
+          });
         }
-        return persistedState;
+
+        if (!state.categorizationKeyword) {
+          state.categorizationKeyword = 'Cocoon';
+        }
+        return state;
       }
     }
   )

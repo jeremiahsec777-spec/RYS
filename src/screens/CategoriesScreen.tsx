@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Platform } from 'react-native';
 import { Audio } from 'expo-av';
 import { useStore, Note } from '../store/useStore';
-import { GlassContainer } from '../components/GlassContainer';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HistoryScreen() {
@@ -31,39 +30,64 @@ export default function HistoryScreen() {
     }
   };
 
-  const renderNote = ({ item }: { item: Note }) => (
-    <View style={styles.noteWrapper}>
-      <GlassContainer style={styles.noteCard} intensity={60}>
-        <View style={styles.noteHeader}>
-          <Text style={styles.noteCategory}>{item.category}</Text>
-          <Text style={styles.noteDate}>{new Date(item.timestamp).toLocaleDateString()}</Text>
-        </View>
-        <Text style={styles.noteText}>{item.text}</Text>
-
-        {item.audioUri && (
-          <TouchableOpacity
-            style={styles.playButton}
-            onPress={() => playSound(item.audioUri)}
-          >
-            <Text style={styles.playButtonText}>▶ Play Audio</Text>
-          </TouchableOpacity>
-        )}
-      </GlassContainer>
-    </View>
-  );
-
   const sortedNotes = useMemo(() => {
     return [...notes].sort((a, b) => b.timestamp - a.timestamp);
   }, [notes]);
 
+  const groupNotesByDate = (notes: Note[]) => {
+    const groups: { [key: string]: Note[] } = {};
+    const today = new Date().toLocaleDateString();
+    const yesterday = new Date(Date.now() - 86400000).toLocaleDateString();
+
+    notes.forEach(note => {
+      const noteDate = new Date(note.timestamp).toLocaleDateString();
+      let groupKey = noteDate;
+      if (noteDate === today) groupKey = 'Today';
+      else if (noteDate === yesterday) groupKey = 'Yesterday';
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      groups[groupKey].push(note);
+    });
+
+    return Object.entries(groups).map(([date, data]) => ({ date, data }));
+  };
+
+  const groupedData = useMemo(() => groupNotesByDate(sortedNotes), [sortedNotes]);
+
+  const renderNote = ({ item }: { item: Note }) => (
+    <View style={styles.noteCard}>
+      <Text style={styles.noteCategory}>{item.categoryName.toUpperCase()}</Text>
+      <Text style={styles.noteText}>{item.text}</Text>
+
+      {item.audioUri && (
+        <TouchableOpacity
+          style={styles.playButton}
+          onPress={() => playSound(item.audioUri)}
+        >
+          <Text style={styles.playButtonText}>▶ Play Audio</Text>
+        </TouchableOpacity>
+      )}
+      <View style={styles.divider} />
+    </View>
+  );
+
+  const renderGroup = ({ item }: { item: { date: string, data: Note[] } }) => (
+    <View style={styles.groupContainer}>
+      <Text style={styles.groupHeader}>{item.date}</Text>
+      {item.data.map(note => <React.Fragment key={note.id}>{renderNote({ item: note })}</React.Fragment>)}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
-      <SafeAreaView style={{flex: 1}}>
+      <SafeAreaView style={{flex: 1}} edges={['top']}>
         <Text style={styles.title}>History</Text>
         <FlatList
-          data={sortedNotes}
-          keyExtractor={(item) => item.id}
-          renderItem={renderNote}
+          data={groupedData}
+          keyExtractor={(item) => item.date}
+          renderItem={renderGroup}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
              <Text style={styles.emptyText}>No notes yet. Tap Cocoon to record one.</Text>
@@ -77,62 +101,61 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF9F6', // Off-white to match
+    backgroundColor: '#FFFFFF', // Pure minimalist white
   },
   title: {
-    fontSize: 34,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#111',
     marginHorizontal: 20,
     marginTop: 20,
-    marginBottom: 10,
-    letterSpacing: 0.5,
+    marginBottom: 20,
+    letterSpacing: -0.5,
   },
   list: {
-    padding: 16,
-    paddingBottom: 100, // Tab bar padding
+    paddingHorizontal: 20,
+    paddingBottom: 120, // Tab bar padding
   },
-  noteWrapper: {
+  groupContainer: {
+    marginBottom: 24,
+  },
+  groupHeader: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#000',
     marginBottom: 16,
   },
   noteCard: {
-    padding: 20,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  noteHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 16,
   },
   noteCategory: {
-    color: '#007AFF', // Theme blue
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  noteDate: {
     color: '#8E8E93',
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 6,
   },
   noteText: {
     color: '#333',
-    fontSize: 16,
+    fontSize: 17,
     lineHeight: 24,
+    fontWeight: '400',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   playButton: {
-    marginTop: 15,
-    backgroundColor: 'rgba(0, 122, 255, 0.1)',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   playButtonText: {
-    color: '#007AFF',
+    color: '#0A84FF',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#E5E5EA',
+    marginTop: 16,
   },
   emptyText: {
     color: '#8E8E93',

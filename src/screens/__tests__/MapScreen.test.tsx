@@ -46,6 +46,7 @@ describe('MapScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (useStore as unknown as jest.Mock).mockReturnValue({
+      categories: [{ id: '1', name: 'General', color: '#000' }],
       notes: [],
     });
   });

@@ -26,7 +26,8 @@ jest.spyOn(Alert, 'alert');
 
 describe('SettingsScreen', () => {
   const mockNotes = [
-    { id: '1', text: 'Test note', category: 'General', timestamp: 1234567890 },
+    { id: '1', text: 'Test note', categoryId: '1',
+    categoryName: 'General', timestamp: 1234567890 },
   ];
 
   beforeEach(() => {

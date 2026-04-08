@@ -1,3 +1,12 @@
+jest.mock('matter-js', () => {
+  return {
+    Engine: { create: jest.fn(() => ({ world: {} })), clear: jest.fn() },
+    Bodies: { circle: jest.fn(() => ({ position: { x: 0, y: 0 } })), rectangle: jest.fn() },
+    Composite: { add: jest.fn(), remove: jest.fn() },
+    Runner: { create: jest.fn(), run: jest.fn(), stop: jest.fn() },
+    Body: { setStatic: jest.fn(), setPosition: jest.fn(), setVelocity: jest.fn() }
+  };
+});
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { useStore } from '../store/useStore';
@@ -12,7 +21,7 @@ jest.mock('react-native-gesture-handler', () => {
   const { View } = require('react-native');
   return {
     GestureDetector: ({ children }: any) => <View>{children}</View>,
-    Gesture: { Pan: () => ({ onUpdate: () => ({ onEnd: () => ({}) }) }) }
+    Gesture: { Pan: () => ({ onStart: function() { return this; }, onUpdate: function() { return this; }, onEnd: function() { return this; } }) }
   };
 });
 
@@ -31,6 +40,8 @@ jest.mock('react-native-reanimated', () => {
     useSharedValue: jest.fn((v) => ({ value: v })),
     useAnimatedStyle: jest.fn(() => ({})),
     withSpring: jest.fn((v) => v),
+    withTiming: jest.fn((v) => v),
+    withRepeat: jest.fn((v) => v),
     runOnJS: jest.fn((fn) => fn),
     __esModule: true,
     default: {

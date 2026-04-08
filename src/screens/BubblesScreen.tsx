@@ -110,6 +110,14 @@ export default function BubblesScreen() {
 
   const playSound = async (uri: string | undefined) => {
     if (!uri) return;
+
+    // Security check: only allow local file playback
+    if (!uri.startsWith('file://')) {
+      console.error('Invalid audio URI: must be a local file path');
+      Alert.alert('Playback Failed', 'Invalid audio source.');
+      return;
+    }
+
     try {
       const { sound } = await Audio.Sound.createAsync({ uri });
       await sound.playAsync();

@@ -27,8 +27,12 @@ export default function SettingsScreen() {
   const handleExport = async () => {
     try {
       const data = JSON.stringify(notes);
-      // @ts-ignore
-      const fileUri = (FileSystem.documentDirectory || "") + 'notes_export.json';
+
+      const documentDirectory = (FileSystem as any).documentDirectory as string | null;
+      if (!documentDirectory) {
+        throw new Error('Document directory is not available');
+      }
+      const fileUri = documentDirectory + 'notes_export.json';
       await FileSystem.writeAsStringAsync(fileUri, data, { encoding: 'utf8' });
       await Sharing.shareAsync(fileUri);
     } catch (error) {
@@ -59,8 +63,12 @@ export default function SettingsScreen() {
     setDownloading(model);
     try {
       const url = WHISPER_MODELS[model];
-      // @ts-ignore
-      const destUri = (FileSystem.documentDirectory || "") + `ggml-${model}.bin`;
+
+      const documentDirectory = (FileSystem as any).documentDirectory as string | null;
+      if (!documentDirectory) {
+        throw new Error('Document directory is not available');
+      }
+      const destUri = documentDirectory + `ggml-${model}.bin`;
       const downloadRes = await FileSystem.downloadAsync(url, destUri);
 
       if (downloadRes.status === 200) {
